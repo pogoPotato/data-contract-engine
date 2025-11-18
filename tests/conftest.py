@@ -1,13 +1,12 @@
 import pytest
+from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base
 
-
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
-
 
 @pytest.fixture(scope="function")
 def test_engine():
@@ -23,7 +22,7 @@ def test_engine():
 
 
 @pytest.fixture(scope="function")
-def test_db(test_engine) -> Session:
+def test_db(test_engine) -> Generator[Session, None, None]:
     TestingSessionLocal = sessionmaker(
         autocommit=False,
         autoflush=False,

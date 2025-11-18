@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: dce_postgres
@@ -21,7 +20,6 @@ services:
     networks:
       - dce_network
 
-  # PgAdmin (Optional - for database management)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: dce_pgadmin
