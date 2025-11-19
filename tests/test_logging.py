@@ -7,7 +7,7 @@ def test_setup_logging():
     setup_logging("INFO")
     logger = get_logger(__name__)
     assert logger is not None
-    assert logger.level == logging.INFO or logger.level == 0 
+    assert logger.level == logging.INFO or logger.level == 0
 
 
 def test_get_logger():
@@ -19,7 +19,7 @@ def test_get_logger():
 def test_log_messages():
     setup_logging("DEBUG")
     logger = get_logger("test")
-    
+
     logger.debug("Debug message")
     logger.info("Info message")
     logger.warning("Warning message")
@@ -33,6 +33,6 @@ def test_log_file_created():
 
     log_dir = Path("logs")
     assert log_dir.exists()
-    
+
     log_files = list(log_dir.glob("*.log"))
     assert len(log_files) > 0

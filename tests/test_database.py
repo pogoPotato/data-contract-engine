@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.orm import Session
-from app.database import get_db, test_connection as db_test_connection, init_db 
+from app.database import get_db, test_connection as db_test_connection, init_db
 
 
 def test_connection():
@@ -9,7 +9,7 @@ def test_connection():
 
 
 def test_database_connection():
-    assert db_test_connection() is True  
+    assert db_test_connection() is True
 
 
 def test_get_db_yields_session():

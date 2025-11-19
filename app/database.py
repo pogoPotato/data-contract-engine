@@ -1,7 +1,7 @@
 import logging
 from typing import Generator
-from sqlalchemy import create_engine, event, text  
-from sqlalchemy.orm import declarative_base  
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import Pool
 
@@ -11,21 +11,18 @@ logger = logging.getLogger(__name__)
 
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True,  
-    pool_size=5,         
-    max_overflow=15,     
-    pool_timeout=30,     
-    pool_recycle=3600,   
-    echo=settings.DEBUG,  
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=15,
+    pool_timeout=30,
+    pool_recycle=3600,
+    echo=settings.DEBUG,
 )
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
 
 @event.listens_for(Pool, "connect")
 def receive_connect(dbapi_conn, connection_record):

@@ -11,20 +11,18 @@ from app.utils.logging import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
     logger.info(f"Environment: {settings.ENV}")
-    
+
     if test_connection():
         logger.info("Database connection successful")
     else:
         logger.error("Database connection failed!")
-    
-    
+
     yield
-    
+
     logger.info("Shutting down application")
     close_db()
 
@@ -35,7 +33,7 @@ app = FastAPI(
     version=settings.VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -46,15 +44,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health", tags=["health"])
 async def health_check():
     db_status = "connected" if test_connection() else "disconnected"
-    
+
     return {
         "status": "healthy" if db_status == "connected" else "unhealthy",
         "database": db_status,
         "version": settings.VERSION,
-        "environment": settings.ENV
+        "environment": settings.ENV,
     }
 
 
@@ -64,23 +63,18 @@ async def root():
         "message": f"Welcome to {settings.PROJECT_NAME}",
         "version": settings.VERSION,
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
 @app.get(f"{settings.API_V1_PREFIX}/", tags=["root"])
 async def api_v1_root():
-    return {
-        "message": f"{settings.PROJECT_NAME} API v1",
-        "version": settings.VERSION
-    }
+    return {"message": f"{settings.PROJECT_NAME} API v1", "version": settings.VERSION}
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
-        "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG
+        "app.main:app", host=settings.HOST, port=settings.PORT, reload=settings.DEBUG
     )

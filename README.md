@@ -4,12 +4,12 @@ A data contract engine that enforces quality agreements between data producers a
 
 ## Features
 
-- 📝 YAML-based contract definitions
-- ✅ Real-time data validation
-- 🔄 Semantic versioning with change detection
-- 📊 Quality metrics and monitoring
-- 📁 Batch file processing
-- 🎨 Web UI for management
+- YAML-based contract definitions
+- Real-time data validation
+- Semantic versioning with change detection
+- Quality metrics and monitoring
+- Batch file processing
+- Web UI for management
 
 ## Development Status
 
