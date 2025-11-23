@@ -177,8 +177,7 @@ class ContractResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
     
     @classmethod
     def from_db_model(cls, db_model):
@@ -224,8 +223,7 @@ class ContractSummary(BaseModel):
     is_active: bool
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ContractTemplate(BaseModel):

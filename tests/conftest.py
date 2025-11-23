@@ -3,7 +3,6 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
-
 from app.database import Base
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -37,16 +36,29 @@ def test_db(test_engine) -> Generator[Session, None, None]:
 
 @pytest.fixture(scope="function")
 def sample_contract_data():
-    return {
-        "name": "test-contract",
-        "version": "1.0.0",
-        "domain": "test",
-        "yaml_content": """contract_version: "1.0"
+    from app.models.schemas import ContractCreate
+    
+    return ContractCreate(
+        name="test-contract",
+        domain="test",
+        yaml_content="""contract_version: "1.0"
+domain: "test"
+description: "Test contract"
 schema:
   user_id:
     type: string
     required: true
-""",
-        "description": "Test contract",
-        "is_active": True,
-    }
+  email:
+    type: string
+    format: email
+    required: true
+  age:
+    type: integer
+    required: false
+    min: 0
+    max: 120
+quality_rules:
+  freshness:
+    max_latency_hours: 24
+"""
+    )

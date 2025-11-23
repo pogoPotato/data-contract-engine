@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from app.config import settings
@@ -104,6 +104,7 @@ async def root():
 async def api_root():
     return {
         "message": "Data Contract Engine API v1",
+        "version": settings.VERSION,
         "endpoints": {
             "contracts": f"{settings.API_V1_PREFIX}/contracts",
             "templates": f"{settings.API_V1_PREFIX}/contracts/templates",

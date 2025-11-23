@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, List, Tuple
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
