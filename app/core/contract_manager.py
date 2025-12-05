@@ -8,6 +8,7 @@ from sqlalchemy import and_
 from app.models.database import Contract, ContractVersion
 from app.models.schemas import ContractCreate, ContractUpdate, ContractSchema
 from app.core.yaml_parser import YAMLParser, YAMLParserError
+from app.core.version_controller import VersionController
 from app.utils.exceptions import (
     DuplicateContractError,
     ContractNotFoundError,
@@ -141,7 +142,7 @@ class ContractManager:
         self,
         contract_id: UUID,
         update_data: ContractUpdate
-    ) -> Contract:
+    ) -> Tuple[Contract, dict]:
         self.logger.info(f"Updating contract: {contract_id}")
         
         contract = self.get_contract_by_id(contract_id)
@@ -158,47 +159,26 @@ class ContractManager:
                 details={"contract_id": str(contract_id)}
             )
         
-        current_version = contract.version
-        version_parts = current_version.split('.')
-        major, minor, patch = int(version_parts[0]), int(version_parts[1]), int(version_parts[2])
-        
-        patch += 1
-        new_version = f"{major}.{minor}.{patch}"
-        
         try:
-            contract.yaml_content = update_data.yaml_content
-            contract.version = new_version
-            contract.updated_at = datetime.now(timezone.utc)
-            
-            if update_data.description is not None:
-                contract.description = update_data.description
-            
-            version = ContractVersion(
-                contract_id=contract.id,
-                version=new_version,
-                yaml_content=update_data.yaml_content,
-                change_type="PATCH",
-                change_summary={
-                    "breaking_changes": [],
-                    "non_breaking_changes": [],
-                    "risk_score": 0,
-                    "risk_level": "LOW",
-                    "total_changes": 0,
-                    "message": "Contract updated (change detection in Phase 4)"
-                },
-                created_at=datetime.now(timezone.utc),
+            version_controller = VersionController(self.db)
+            new_version = version_controller.create_version(
+                contract_id=str(contract_id),
+                new_yaml=update_data.yaml_content,
                 created_by="system"
             )
             
-            self.db.add(version)
-            self.db.commit()
+            change_report = new_version.change_summary
+            
+            if update_data.description is not None:
+                contract.description = update_data.description
+                self.db.commit()
             
             self.logger.info(
                 f"Contract updated: {contract_id}, "
-                f"version {current_version} → {new_version}"
+                f"new version: {contract.version}"
             )
             
-            return contract
+            return contract, change_report
             
         except Exception as e:
             self.db.rollback()
