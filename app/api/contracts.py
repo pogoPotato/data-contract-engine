@@ -1,6 +1,6 @@
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -16,7 +16,8 @@ from app.utils.exceptions import (
     DCEBaseException,
     ContractNotFoundError,
     DuplicateContractError,
-    InvalidYAMLError
+    InvalidYAMLError,
+    InvalidContractSchemaError
 )
 import logging
 
@@ -164,36 +165,52 @@ def get_contract_by_name(
         )
 
 
-@router.put("/{contract_id}", response_model=ContractResponse)
+@router.put("/{contract_id}", response_model=dict)
 def update_contract(
-    contract_id: UUID = Path(..., description="Contract UUID"),
-    update_data: ContractUpdate = ...,
+    contract_id: str,
+    contract_update: ContractUpdate,
     db: Session = Depends(get_db)
 ):
-    logger.info(f"PUT /contracts/{contract_id}")
-    
     try:
-        manager = ContractManager(db)
-        contract = manager.update_contract(contract_id, update_data)
+        contract_manager = ContractManager(db)
         
-        return ContractResponse.from_db_model(contract)
+        contract_update.validate_contract_structure()
         
-    except ContractNotFoundError as e:
-        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+        contract, change_report = contract_manager.update_contract(
+            UUID(contract_id),
+            contract_update
+        )
+        
+        return {
+            "contract": ContractResponse.from_db_model(contract),
+            "change_report": change_report
+        }
     
-    except InvalidYAMLError as e:
-        logger.warning(f"Invalid YAML in update: {str(e)}")
-        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
-    
-    except DCEBaseException as e:
-        logger.error(f"Contract update failed: {str(e)}")
-        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
-    
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+    except ValueError:
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "message": str(e)}
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid UUID format"
+        )
+    except ContractNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except InvalidYAMLError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except InvalidContractSchemaError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error updating contract: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update contract: {str(e)}"
         )
 
 
