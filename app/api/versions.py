@@ -59,6 +59,44 @@ def get_version_history(
         )
 
 
+@router.get("/{contract_id}/versions/latest", response_model=ContractVersionResponse)
+def get_latest_version(
+    contract_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        version_controller = VersionController(db)
+        versions = version_controller.get_version_history(contract_id, limit=1)
+        
+        if not versions:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No versions found for contract {contract_id}"
+            )
+        
+        latest = versions[0]
+        
+        return ContractVersionResponse(
+            id=str(latest.id),
+            contract_id=str(latest.contract_id),
+            version=latest.version,
+            yaml_content=latest.yaml_content,
+            change_type=latest.change_type,
+            change_summary=latest.change_summary,
+            created_at=latest.created_at,
+            created_by=latest.created_by
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting latest version: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve latest version: {str(e)}"
+        )
+
+
 @router.get("/{contract_id}/versions/{version}", response_model=ContractVersionResponse)
 def get_version(
     contract_id: str,
@@ -131,44 +169,6 @@ def compare_versions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to compare versions: {str(e)}"
-        )
-
-
-@router.get("/{contract_id}/versions/latest", response_model=ContractVersionResponse)
-def get_latest_version(
-    contract_id: str,
-    db: Session = Depends(get_db)
-):
-    try:
-        version_controller = VersionController(db)
-        versions = version_controller.get_version_history(contract_id, limit=1)
-        
-        if not versions:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No versions found for contract {contract_id}"
-            )
-        
-        latest = versions[0]
-        
-        return ContractVersionResponse(
-            id=str(latest.id),
-            contract_id=str(latest.contract_id),
-            version=latest.version,
-            yaml_content=latest.yaml_content,
-            change_type=latest.change_type,
-            change_summary=latest.change_summary,
-            created_at=latest.created_at,
-            created_by=latest.created_by
-        )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting latest version: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve latest version: {str(e)}"
         )
 
 
