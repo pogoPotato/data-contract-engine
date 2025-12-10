@@ -29,6 +29,7 @@ router = APIRouter(
 )
 
 
+@router.post("", response_model=ContractResponse, status_code=201)
 @router.post("/", response_model=ContractResponse, status_code=201)
 def create_contract(
     contract_data: ContractCreate,
@@ -62,6 +63,7 @@ def create_contract(
         )
 
 
+@router.get("", response_model=ContractList)
 @router.get("/", response_model=ContractList)
 def list_contracts(
     domain: Optional[str] = Query(None, description="Filter by domain"),
