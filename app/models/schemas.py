@@ -1,5 +1,5 @@
 from typing import Optional, Dict, List, Any, Union
-from datetime import datetime
+from datetime import datetime, date
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 import re
@@ -351,3 +351,63 @@ class RollbackResponse(BaseModel):
     new_version: str
     rolled_back_to: str
     message: str
+
+
+# ============ NEW MODELS ADDED BELOW ============
+
+
+class BatchProcessingResult(BaseModel):
+    batch_id: UUID
+    contract_id: UUID
+    total_records: int
+    passed: int
+    failed: int
+    pass_rate: float
+    execution_time_ms: float
+    errors_summary: Dict[str, int]
+    sample_errors: List[Dict[str, Any]]
+    processed_at: datetime
+
+
+class DailyMetrics(BaseModel):
+    contract_id: UUID
+    metric_date: date
+    total_validations: int
+    passed: int
+    failed: int
+    pass_rate: float
+    avg_execution_time_ms: float
+    top_errors: Dict[str, int]
+    quality_score: float
+    
+    class Config:
+        from_attributes = True
+
+
+class TrendData(BaseModel):
+    dates: List[date]
+    pass_rates: List[float]
+    volumes: List[int]
+    quality_scores: List[float]
+    pass_rate_trend: str
+    volume_trend: str
+    quality_trend: str
+    days: int
+
+
+class PlatformSummary(BaseModel):
+    total_contracts: int
+    active_contracts: int
+    total_validations_today: int
+    avg_pass_rate: float
+    top_performing_contracts: List[Dict[str, Any]]
+    contracts_needing_attention: List[Dict[str, Any]]
+
+
+class BatchStatus(BaseModel):
+    batch_id: UUID
+    status: str
+    progress: float
+    total_records: int
+    processed_records: int
+    result: Optional[BatchProcessingResult] = None
