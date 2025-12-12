@@ -1,0 +1,35 @@
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+
+revision = '005'
+down_revision = '004'
+
+
+def upgrade():
+    op.create_table(
+        'batch_summaries',
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('batch_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('contract_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('total_records', sa.Integer(), nullable=False),
+        sa.Column('passed', sa.Integer(), nullable=False),
+        sa.Column('failed', sa.Integer(), nullable=False),
+        sa.Column('pass_rate', sa.Float(), nullable=False),
+        sa.Column('execution_time_ms', sa.Float(), nullable=False),
+        sa.Column('errors_summary', postgresql.JSONB(), nullable=True),
+        sa.Column('processed_at', sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(['contract_id'], ['contracts.id'], ),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('batch_id')
+    )
+    
+    op.create_index('ix_batch_summaries_batch_id', 'batch_summaries', ['batch_id'])
+    op.create_index('ix_batch_summaries_processed_at', 'batch_summaries', ['processed_at'])
+
+
+def downgrade():
+    op.drop_index('ix_batch_summaries_processed_at', 'batch_summaries')
+    op.drop_index('ix_batch_summaries_batch_id', 'batch_summaries')
+    op.drop_table('batch_summaries')
