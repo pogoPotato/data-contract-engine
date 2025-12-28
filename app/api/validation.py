@@ -265,36 +265,22 @@ async def process_file_background(
         result = await processor.process_file(
             contract_id=contract_id,
             file_path=file_path,
-            file_type=file_type
+            file_type=file_type,
+            batch_id=batch_id
         )
-        
-        batch_summary = BatchSummary(
-            id=str(uuid.uuid4()),
-            batch_id=str(batch_id),
-            contract_id=str(contract_id),
-            total_records=result.total_records,
-            passed=result.passed,
-            failed=result.failed,
-            pass_rate=result.pass_rate,
-            execution_time_ms=result.execution_time_ms,
-            errors_summary=result.errors_summary,
-            processed_at=datetime.utcnow()
-        )
-        
-        db.add(batch_summary)
-        db.commit()
         
         logger.info(f"Batch {batch_id} completed: {result.passed}/{result.total_records} passed")
-              
+        
     except Exception as e:
         logger.error(f"Error processing batch {batch_id}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         db.rollback()
-        
     finally:
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
+                logger.info(f"Removed temporary file: {file_path}")
             except Exception as e:
                 logger.error(f"Error removing file {file_path}: {str(e)}")
-        
         db.close()
