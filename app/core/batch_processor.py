@@ -5,12 +5,10 @@ import time
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
-
 from app.core.file_handlers import FileHandlerFactory
 from app.core.validation_engine import ValidationEngine
 from app.models.schemas import BatchProcessingResult
 from app.utils.exceptions import InvalidFileFormatError
-
 
 class BatchProcessor:
     
@@ -24,9 +22,12 @@ class BatchProcessor:
         contract_id: UUID,
         file_path: str,
         file_type: str,
-        chunk_size: int = 1000
+        chunk_size: int = 1000,
+        batch_id: Optional[UUID] = None
     ) -> BatchProcessingResult:
-        batch_id = uuid.uuid4()
+        if batch_id is None:
+            batch_id = uuid.uuid4()
+        
         start_time = time.time()
         
         handler = FileHandlerFactory.get_handler(file_type)
@@ -91,8 +92,8 @@ class BatchProcessor:
         from app.models.database import BatchSummary
         
         batch_summary = BatchSummary(
-            batch_id=result.batch_id,
-            contract_id=result.contract_id,
+            batch_id=str(result.batch_id),
+            contract_id=str(result.contract_id),
             total_records=result.total_records,
             passed=result.passed,
             failed=result.failed,
