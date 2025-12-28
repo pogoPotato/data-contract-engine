@@ -19,7 +19,7 @@ class MetricsAggregator:
         end_datetime = datetime.combine(target_date, datetime.max.time())
         
         validations = self.db.query(ValidationResult).filter(
-            ValidationResult.contract_id == contract_id,
+            ValidationResult.contract_id == str(contract_id),
             ValidationResult.validated_at >= start_datetime,
             ValidationResult.validated_at < end_datetime
         ).all()
@@ -50,7 +50,7 @@ class MetricsAggregator:
         )
         
         metrics = QualityMetric(
-            contract_id=contract_id,
+            contract_id=str(contract_id),
             metric_date=target_date,
             total_validations=total,
             passed=passed,
@@ -62,7 +62,7 @@ class MetricsAggregator:
         )
         
         existing = self.db.query(QualityMetric).filter(
-            QualityMetric.contract_id == contract_id,
+            QualityMetric.contract_id == str(contract_id),
             QualityMetric.metric_date == target_date
         ).first()
         
@@ -98,7 +98,7 @@ class MetricsAggregator:
     def _calculate_consistency_score(self, contract_id: UUID) -> float:
         seven_days_ago = date.today() - timedelta(days=7)
         metrics = self.db.query(QualityMetric).filter(
-            QualityMetric.contract_id == contract_id,
+            QualityMetric.contract_id == str(contract_id),
             QualityMetric.metric_date >= seven_days_ago
         ).all()
         
@@ -126,7 +126,7 @@ class MetricsAggregator:
         start_date = end_date - timedelta(days=days)
         
         metrics = self.db.query(QualityMetric).filter(
-            QualityMetric.contract_id == contract_id,
+            QualityMetric.contract_id == str(contract_id),
             QualityMetric.metric_date >= start_date,
             QualityMetric.metric_date <= end_date
         ).order_by(QualityMetric.metric_date).all()
@@ -200,7 +200,7 @@ class MetricsAggregator:
     
     def _create_empty_metrics(self, contract_id: UUID, target_date: date) -> DailyMetrics:
         return DailyMetrics(
-            contract_id=contract_id,
+            contract_id=str(contract_id),
             metric_date=target_date,
             total_validations=0,
             passed=0,
