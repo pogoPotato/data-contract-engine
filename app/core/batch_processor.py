@@ -53,7 +53,14 @@ class BatchProcessor:
             total_records += chunk_result.total_records
             passed_records += chunk_result.passed
             failed_records += chunk_result.failed
-            all_errors.extend(chunk_result.sample_errors)
+            
+            for err in chunk_result.sample_errors:
+                if hasattr(err, 'to_dict'):
+                    all_errors.append(err.to_dict())
+                elif hasattr(err, '__dict__'):
+                    all_errors.append({k: v for k, v in err.__dict__.items() if not k.startswith('_')})
+                elif isinstance(err, dict):
+                    all_errors.append(err)
             
             if self.progress_callback and total_records > 0:
                 progress = (chunk_num + 1) * chunk_size / total_records * 100
@@ -85,7 +92,12 @@ class BatchProcessor:
     
     def _count_errors_by_type(self, errors: List) -> Dict[str, int]:
         from collections import Counter
-        error_types = [err.error_type for err in errors]
+        error_types = []
+        for err in errors:
+            if isinstance(err, dict) and 'error_type' in err:
+                error_types.append(err['error_type'])
+            elif hasattr(err, 'error_type'):
+                error_types.append(err.error_type)
         return dict(Counter(error_types))
     
     def _store_batch_summary(self, result: BatchProcessingResult):
