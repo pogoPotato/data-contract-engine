@@ -68,3 +68,6 @@ test_invalid.csv
 test_valid.csv
 test_mini.csv
 setup_phase5.sh
+*.sh
+*.csv
+test_wrapped.json
