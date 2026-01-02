@@ -1,6 +1,6 @@
 import requests
+import base64
 from typing import Dict, List, Optional, Any
-import json
 
 class APIClient:
     def __init__(self, base_url: str):
@@ -18,7 +18,13 @@ class APIClient:
         params = {"limit": limit}
         if domain:
             params["domain"] = domain
-        return self._request("GET", "contracts", params=params)
+        result = self._request("GET", "contracts", params=params)
+        
+        if isinstance(result, list):
+            return result
+        elif isinstance(result, dict) and "contracts" in result:
+            return result["contracts"]
+        return []
     
     def get_contract(self, contract_id: str) -> Dict:
         return self._request("GET", f"contracts/{contract_id}")
@@ -44,7 +50,6 @@ class APIClient:
         return self._request("POST", f"validate/{contract_id}", json=payload)
     
     def validate_batch(self, contract_id: str, file_content: str, file_type: str) -> Dict:
-        import base64
         encoded = base64.b64encode(file_content.encode()).decode()
         payload = {
             "file_data": encoded,
