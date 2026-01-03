@@ -99,14 +99,14 @@ with tab2:
     
     st.markdown("**Contract Definition (YAML) *:**")
     
-    default_yaml = """contract_version: "1.0"
+    default_yaml = r"""contract_version: "1.0"
 description: "Your contract description"
 
 schema:
   user_id:
     type: string
     required: true
-    pattern: "^usr_\\\\d+$"
+    pattern: "^usr_\\d+$"
     description: "Unique user identifier"
   
   email:
