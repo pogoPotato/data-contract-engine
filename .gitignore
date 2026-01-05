@@ -72,3 +72,4 @@ setup_phase5.sh
 *.csv
 test_wrapped.json
 terminal_output.txt
+error.txt
