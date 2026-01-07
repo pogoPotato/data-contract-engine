@@ -23,8 +23,8 @@ class APIClient:
                 pass
             raise Exception(error_msg)
     
-    def get_contracts(self, domain: Optional[str] = None, limit: int = 100) -> List[Dict]:
-        params = {"limit": limit}
+    def get_contracts(self, domain: Optional[str] = None, limit: int = 100, is_active: bool = True) -> List[Dict]:
+        params = {"limit": limit, "is_active": is_active}
         if domain:
             params["domain"] = domain
         result = self._request("GET", "contracts", params=params)
@@ -54,8 +54,12 @@ class APIClient:
         data = {"yaml_content": yaml_content}
         return self._request("PUT", f"contracts/{contract_id}", json=data)
     
-    def delete_contract(self, contract_id: str) -> Dict:
-        return self._request("DELETE", f"contracts/{contract_id}")
+    def delete_contract(self, contract_id: str, hard_delete: bool = False) -> Dict:
+        params = {"hard_delete": "true"} if hard_delete else {}
+        return self._request("DELETE", f"contracts/{contract_id}", params=params)
+    
+    def activate_contract(self, contract_id: str) -> Dict:
+        return self._request("POST", f"contracts/{contract_id}/activate")
     
     def validate_single(self, contract_id: str, data: Dict) -> Dict:
         payload = {"data": data}
