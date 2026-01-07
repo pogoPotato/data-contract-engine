@@ -8,25 +8,28 @@ st.title("📝 Contract Management")
 
 api_client = st.session_state.api_client
 
-tab1, tab2 = st.tabs(["📋 List Contracts", "➕ Create Contract"])
+tab1, tab2, tab3 = st.tabs(["📋 Active Contracts", "🗄️ Inactive Contracts", "➕ Create Contract"])
 
 with tab1:
-    st.subheader("Your Contracts")
+    st.subheader("Active Contracts")
     
     col1, col2 = st.columns([3, 1])
     with col1:
-        search = st.text_input("🔍 Search contracts", key="search")
+        search = st.text_input("🔍 Search contracts", key="search_active")
     with col2:
-        domain_filter = st.selectbox("Filter by domain", ["All", "analytics", "finance", "marketing", "sales"])
+        domain_filter = st.selectbox("Filter by domain", ["All", "analytics", "finance", "marketing", "sales", "engineering"], key="domain_active")
     
     try:
-        contracts = api_client.get_contracts(domain=None if domain_filter == "All" else domain_filter)
+        contracts = api_client.get_contracts(
+            domain=None if domain_filter == "All" else domain_filter,
+            is_active=True
+        )
         
         if search:
             contracts = [c for c in contracts if search.lower() in c["name"].lower()]
         
         if not contracts:
-            st.info("No contracts found. Create your first contract in the 'Create Contract' tab!")
+            st.info("No active contracts found. Create your first contract in the 'Create Contract' tab!")
         else:
             for contract in contracts:
                 with st.expander(f"**{contract['name']}** (v{contract['version']})", expanded=False):
@@ -38,20 +41,45 @@ with tab1:
                     
                     with col2:
                         st.markdown(f"**Created:** {contract['created_at'][:10]}")
-                        st.markdown(f"**Status:** {'✅ Active' if contract.get('is_active', True) else '❌ Inactive'}")
+                        st.markdown(f"**Status:** ✅ Active")
                     
                     with col3:
-                        if st.button("Edit", key=f"edit_{contract['id']}"):
+                        if st.button("✏️ Edit", key=f"edit_{contract['id']}", use_container_width=True):
                             st.session_state.editing_contract = contract
                             st.rerun()
                         
-                        if st.button("Delete", key=f"delete_{contract['id']}", type="secondary"):
+                        if st.button("🗑️ Deactivate", key=f"deactivate_{contract['id']}", 
+                                   use_container_width=True,
+                                   help="Mark as inactive (can be restored later)"):
                             try:
-                                api_client.delete_contract(contract['id'])
-                                st.success(f"Deleted contract: {contract['name']}")
+                                api_client.delete_contract(contract['id'], hard_delete=False)
+                                st.success(f"✅ Deactivated: {contract['name']}")
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Failed to delete: {e}")
+                                st.error(f"Failed to deactivate: {e}")
+                        
+                        if st.button("💥 Delete Forever", key=f"delete_{contract['id']}", 
+                                   type="secondary",
+                                   use_container_width=True,
+                                   help="⚠️ PERMANENT deletion - cannot be undone!"):
+                            st.session_state[f"confirm_delete_{contract['id']}"] = True
+                        
+                        if st.session_state.get(f"confirm_delete_{contract['id']}", False):
+                            st.warning("⚠️ This will permanently delete the contract and ALL related data!")
+                            col_a, col_b = st.columns(2)
+                            with col_a:
+                                if st.button("✅ Yes, Delete", key=f"confirm_yes_{contract['id']}", type="primary"):
+                                    try:
+                                        api_client.delete_contract(contract['id'], hard_delete=True)
+                                        st.success(f"🗑️ Permanently deleted: {contract['name']}")
+                                        del st.session_state[f"confirm_delete_{contract['id']}"]
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to delete: {e}")
+                            with col_b:
+                                if st.button("❌ Cancel", key=f"confirm_no_{contract['id']}"):
+                                    del st.session_state[f"confirm_delete_{contract['id']}"]
+                                    st.rerun()
                     
                     st.markdown("**YAML Content:**")
                     st.code(contract['yaml_content'], language="yaml")
@@ -74,7 +102,7 @@ with tab1:
                         st.session_state.editing_contract['id'],
                         new_yaml
                     )
-                    st.success(f"Updated to version {result['version']}")
+                    st.success(f"Updated to version {result['contract']['version']}")
                     del st.session_state.editing_contract
                     st.rerun()
                 except Exception as e:
@@ -86,6 +114,80 @@ with tab1:
                 st.rerun()
 
 with tab2:
+    st.subheader("Inactive Contracts")
+    st.info("💡 These contracts have been deactivated but can be restored.")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        search_inactive = st.text_input("🔍 Search inactive contracts", key="search_inactive")
+    with col2:
+        domain_filter_inactive = st.selectbox("Filter by domain", ["All", "analytics", "finance", "marketing", "sales", "engineering"], key="domain_inactive")
+    
+    try:
+        inactive_contracts = api_client.get_contracts(
+            domain=None if domain_filter_inactive == "All" else domain_filter_inactive,
+            is_active=False
+        )
+        
+        if search_inactive:
+            inactive_contracts = [c for c in inactive_contracts if search_inactive.lower() in c["name"].lower()]
+        
+        if not inactive_contracts:
+            st.info("No inactive contracts found.")
+        else:
+            for contract in inactive_contracts:
+                with st.expander(f"**{contract['name']}** (v{contract['version']}) - ⚠️ Inactive", expanded=False):
+                    col1, col2, col3 = st.columns([2, 2, 1])
+                    
+                    with col1:
+                        st.markdown(f"**Domain:** {contract['domain']}")
+                        st.markdown(f"**Version:** {contract['version']}")
+                    
+                    with col2:
+                        st.markdown(f"**Created:** {contract['created_at'][:10]}")
+                        st.markdown(f"**Status:** ❌ Inactive")
+                    
+                    with col3:
+                        if st.button("♻️ Restore", key=f"restore_{contract['id']}", 
+                                   use_container_width=True,
+                                   help="Restore this contract to active status"):
+                            try:
+                                api_client.activate_contract(contract['id'])
+                                st.success(f"✅ Restored: {contract['name']}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Failed to restore: {e}")
+                        
+                        if st.button("💥 Delete Forever", key=f"delete_inactive_{contract['id']}", 
+                                   type="secondary",
+                                   use_container_width=True,
+                                   help="⚠️ PERMANENT deletion - cannot be undone!"):
+                            st.session_state[f"confirm_delete_inactive_{contract['id']}"] = True
+                        
+                        if st.session_state.get(f"confirm_delete_inactive_{contract['id']}", False):
+                            st.warning("⚠️ This will permanently delete the contract and ALL related data!")
+                            col_a, col_b = st.columns(2)
+                            with col_a:
+                                if st.button("✅ Yes, Delete", key=f"confirm_yes_inactive_{contract['id']}", type="primary"):
+                                    try:
+                                        api_client.delete_contract(contract['id'], hard_delete=True)
+                                        st.success(f"🗑️ Permanently deleted: {contract['name']}")
+                                        del st.session_state[f"confirm_delete_inactive_{contract['id']}"]
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to delete: {e}")
+                            with col_b:
+                                if st.button("❌ Cancel", key=f"confirm_no_inactive_{contract['id']}"):
+                                    del st.session_state[f"confirm_delete_inactive_{contract['id']}"]
+                                    st.rerun()
+                    
+                    st.markdown("**YAML Content:**")
+                    st.code(contract['yaml_content'], language="yaml")
+    
+    except Exception as e:
+        st.error(f"Failed to load inactive contracts: {e}")
+
+with tab3:
     st.subheader("Create New Contract")
     
     col1, col2 = st.columns(2)
@@ -127,7 +229,7 @@ quality_rules:
     max_latency_hours: 2
   
   completeness:
-    min_row_count: 100
+    min_row_count: 1
     max_null_percentage: 5.0
   
   uniqueness:
