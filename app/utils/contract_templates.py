@@ -118,20 +118,20 @@ def get_all_templates() -> List[ContractTemplate]:
             name="basic-user-events",
             description="Basic user analytics events with user ID and email",
             domain="user-analytics",
-            yaml_content=BASIC_USER_EVENTS
+            yaml_content=BASIC_USER_EVENTS,
         ),
         ContractTemplate(
             name="ecommerce-orders",
             description="E-commerce order events with line items",
             domain="e-commerce",
-            yaml_content=ECOMMERCE_ORDERS
+            yaml_content=ECOMMERCE_ORDERS,
         ),
         ContractTemplate(
             name="iot-sensor-data",
             description="IoT sensor readings with device tracking",
             domain="iot",
-            yaml_content=IOT_SENSOR_DATA
-        )
+            yaml_content=IOT_SENSOR_DATA,
+        ),
     ]
 
 

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, List, Optional, Callable
 from uuid import UUID
 import uuid
 import time
@@ -10,66 +10,67 @@ from app.core.validation_engine import ValidationEngine
 from app.models.schemas import BatchProcessingResult
 from app.utils.exceptions import InvalidFileFormatError
 
+
 class BatchProcessor:
-    
+
     def __init__(self, db_session: Session):
         self.db = db_session
         self.logger = logging.getLogger(__name__)
         self.progress_callback: Optional[Callable[[float], None]] = None
-    
+
     async def process_file(
         self,
         contract_id: UUID,
         file_path: str,
         file_type: str,
         chunk_size: int = 1000,
-        batch_id: Optional[UUID] = None
+        batch_id: Optional[UUID] = None,
     ) -> BatchProcessingResult:
         if batch_id is None:
             batch_id = uuid.uuid4()
-        
+
         start_time = time.time()
-        
+
         handler = FileHandlerFactory.get_handler(file_type)
         validation_engine = ValidationEngine(self.db)
-        
+
         if not handler.validate_format(file_path):
             raise InvalidFileFormatError(f"Invalid {file_type} format")
-        
+
         total_records = 0
         passed_records = 0
         failed_records = 0
         all_errors = []
-        
+
         for chunk_num, chunk in enumerate(handler.read_chunks(file_path, chunk_size)):
             self.logger.info(f"Processing chunk {chunk_num}, {len(chunk)} records")
-            
+
             chunk_result = await validation_engine.validate_batch(
-                contract_id=contract_id,
-                data=chunk,
-                batch_id=batch_id
+                contract_id=contract_id, data=chunk, batch_id=batch_id
             )
-            
+
             total_records += chunk_result.total_records
             passed_records += chunk_result.passed
             failed_records += chunk_result.failed
-            
+
             for err in chunk_result.sample_errors:
-                if hasattr(err, 'to_dict'):
+                if hasattr(err, "to_dict"):
                     all_errors.append(err.to_dict())
-                elif hasattr(err, '__dict__'):
-                    all_errors.append({k: v for k, v in err.__dict__.items() if not k.startswith('_')})
+                elif hasattr(err, "__dict__"):
+                    all_errors.append(
+                        {k: v for k, v in err.__dict__.items() if not k.startswith("_")}
+                    )
                 elif isinstance(err, dict):
                     all_errors.append(err)
-            
+
             if self.progress_callback and total_records > 0:
                 progress = (chunk_num + 1) * chunk_size / total_records * 100
                 self.progress_callback(min(progress, 100))
-        
+
         execution_time = (time.time() - start_time) * 1000
         pass_rate = (passed_records / total_records * 100) if total_records > 0 else 0
         error_counts = self._count_errors_by_type(all_errors)
-        
+
         result = BatchProcessingResult(
             batch_id=batch_id,
             contract_id=contract_id,
@@ -80,29 +81,30 @@ class BatchProcessor:
             execution_time_ms=execution_time,
             errors_summary=error_counts,
             sample_errors=all_errors[:50],
-            processed_at=datetime.utcnow()
+            processed_at=datetime.utcnow(),
         )
-        
+
         self._store_batch_summary(result)
-        
+
         return result
-    
+
     def set_progress_callback(self, callback: Callable[[float], None]):
         self.progress_callback = callback
-    
+
     def _count_errors_by_type(self, errors: List) -> Dict[str, int]:
         from collections import Counter
+
         error_types = []
         for err in errors:
-            if isinstance(err, dict) and 'error_type' in err:
-                error_types.append(err['error_type'])
-            elif hasattr(err, 'error_type'):
+            if isinstance(err, dict) and "error_type" in err:
+                error_types.append(err["error_type"])
+            elif hasattr(err, "error_type"):
                 error_types.append(err.error_type)
         return dict(Counter(error_types))
-    
+
     def _store_batch_summary(self, result: BatchProcessingResult):
         from app.models.database import BatchSummary
-        
+
         batch_summary = BatchSummary(
             batch_id=str(result.batch_id),
             contract_id=str(result.contract_id),
@@ -112,8 +114,8 @@ class BatchProcessor:
             pass_rate=result.pass_rate,
             execution_time_ms=result.execution_time_ms,
             errors_summary=result.errors_summary,
-            processed_at=result.processed_at
+            processed_at=result.processed_at,
         )
-        
+
         self.db.add(batch_summary)
         self.db.commit()

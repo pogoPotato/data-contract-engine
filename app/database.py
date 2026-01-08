@@ -64,6 +64,7 @@ def test_connection() -> bool:
         logger.error(f"Database connection test failed: {e}")
         return False
 
+
 def get_db_session():
     db = SessionLocal()
     return db

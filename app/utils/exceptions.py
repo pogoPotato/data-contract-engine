@@ -3,17 +3,22 @@ from datetime import datetime
 
 
 class DCEBaseException(Exception):
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None, status_code: int = 500):
+    def __init__(
+        self,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+        status_code: int = 500,
+    ):
         super().__init__(message)
         self.message = message
         self.details = details or {}
         self.status_code = status_code
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "error": self.__class__.__name__,
             "message": self.message,
-            "details": self.details
+            "details": self.details,
         }
 
 
@@ -27,7 +32,7 @@ class DuplicateContractError(ContractError):
         super().__init__(
             message=message,
             details=details or {"contract_name": contract_name},
-            status_code=409
+            status_code=409,
         )
 
 
@@ -37,7 +42,7 @@ class ContractNotFoundError(ContractError):
         super().__init__(
             message=message,
             details=details or {"contract_id": contract_id},
-            status_code=404
+            status_code=404,
         )
 
 
@@ -47,7 +52,7 @@ class InvalidYAMLError(ContractError):
         super().__init__(
             message=message,
             details=details or {"yaml_error": error_message},
-            status_code=400
+            status_code=400,
         )
 
 
@@ -57,7 +62,7 @@ class InvalidContractSchemaError(ContractError):
         super().__init__(
             message=message,
             details=details or {"schema_error": error_message},
-            status_code=400
+            status_code=400,
         )
 
 
@@ -67,7 +72,7 @@ class ContractInactiveError(ContractError):
         super().__init__(
             message=message,
             details=details or {"contract_id": contract_id},
-            status_code=400
+            status_code=400,
         )
 
 
@@ -80,12 +85,13 @@ class SchemaValidationError(ValidationError):
         message = f"Schema validation failed with {len(errors)} error(s)"
         super().__init__(
             message=message,
-            details=details or {
+            details=details
+            or {
                 "contract_id": contract_id,
                 "error_count": len(errors),
-                "errors": errors
+                "errors": errors,
             },
-            status_code=422
+            status_code=422,
         )
 
 
@@ -94,34 +100,32 @@ class QualityValidationError(ValidationError):
         message = f"Quality validation failed with {len(errors)} error(s)"
         super().__init__(
             message=message,
-            details=details or {
+            details=details
+            or {
                 "contract_id": contract_id,
                 "error_count": len(errors),
-                "errors": errors
+                "errors": errors,
             },
-            status_code=422
+            status_code=422,
         )
 
 
 class DatabaseError(DCEBaseException):
-    def __init__(self, operation: str, error_message: str, details: Optional[Dict] = None):
+    def __init__(
+        self, operation: str, error_message: str, details: Optional[Dict] = None
+    ):
         message = f"Database {operation} failed: {error_message}"
         super().__init__(
             message=message,
-            details=details or {
-                "operation": operation,
-                "error": error_message
-            },
-            status_code=500
+            details=details or {"operation": operation, "error": error_message},
+            status_code=500,
         )
 
 
 class TransactionError(DatabaseError):
     def __init__(self, error_message: str, details: Optional[Dict] = None):
         super().__init__(
-            operation="transaction",
-            error_message=error_message,
-            details=details
+            operation="transaction", error_message=error_message, details=details
         )
 
 
@@ -130,15 +134,14 @@ class FileProcessingError(DCEBaseException):
 
 
 class InvalidFileFormatError(FileProcessingError):
-    def __init__(self, file_type: str, error_message: str, details: Optional[Dict] = None):
+    def __init__(
+        self, file_type: str, error_message: str, details: Optional[Dict] = None
+    ):
         message = f"Invalid {file_type} file format: {error_message}"
         super().__init__(
             message=message,
-            details=details or {
-                "file_type": file_type,
-                "error": error_message
-            },
-            status_code=400
+            details=details or {"file_type": file_type, "error": error_message},
+            status_code=400,
         )
 
 
@@ -147,24 +150,20 @@ class FileSizeLimitError(FileProcessingError):
         message = f"File size {file_size} bytes exceeds limit of {max_size} bytes"
         super().__init__(
             message=message,
-            details=details or {
-                "file_size": file_size,
-                "max_size": max_size
-            },
-            status_code=413
+            details=details or {"file_size": file_size, "max_size": max_size},
+            status_code=413,
         )
 
 
 class BatchProcessingError(FileProcessingError):
-    def __init__(self, batch_id: str, error_message: str, details: Optional[Dict] = None):
+    def __init__(
+        self, batch_id: str, error_message: str, details: Optional[Dict] = None
+    ):
         message = f"Batch {batch_id} processing failed: {error_message}"
         super().__init__(
             message=message,
-            details=details or {
-                "batch_id": batch_id,
-                "error": error_message
-            },
-            status_code=500
+            details=details or {"batch_id": batch_id, "error": error_message},
+            status_code=500,
         )
 
 
@@ -177,11 +176,8 @@ class VersionNotFoundError(VersioningError):
         message = f"Version '{version}' not found for contract '{contract_id}'"
         super().__init__(
             message=message,
-            details=details or {
-                "contract_id": contract_id,
-                "version": version
-            },
-            status_code=404
+            details=details or {"contract_id": contract_id, "version": version},
+            status_code=404,
         )
 
 
@@ -189,9 +185,7 @@ class InvalidVersionError(VersioningError):
     def __init__(self, version: str, details: Optional[Dict] = None):
         message = f"Invalid version format: '{version}'"
         super().__init__(
-            message=message,
-            details=details or {"version": version},
-            status_code=400
+            message=message, details=details or {"version": version}, status_code=400
         )
 
 
@@ -205,18 +199,14 @@ class InsufficientPermissionsError(AuthorizationError):
         super().__init__(
             message=message,
             details=details or {"operation": operation},
-            status_code=403
+            status_code=403,
         )
 
 
 class AuthenticationRequiredError(AuthorizationError):
     def __init__(self, details: Optional[Dict] = None):
         message = "Authentication is required for this operation"
-        super().__init__(
-            message=message,
-            details=details,
-            status_code=401
-        )
+        super().__init__(message=message, details=details, status_code=401)
 
 
 # ============ NEW EXCEPTIONS ADDED BELOW ============
@@ -224,73 +214,80 @@ class AuthenticationRequiredError(AuthorizationError):
 
 class UnsupportedFileFormatError(DCEBaseException):
     """Raised when an unsupported file format is provided."""
-    def __init__(self, file_type: str, supported_formats: list, details: Optional[Dict] = None):
+
+    def __init__(
+        self, file_type: str, supported_formats: list, details: Optional[Dict] = None
+    ):
         message = f"Unsupported file format: '{file_type}'. Supported formats: {', '.join(supported_formats)}"
         super().__init__(
             message=message,
-            details=details or {
-                "file_type": file_type,
-                "supported_formats": supported_formats
-            },
-            status_code=415  # Unsupported Media Type
+            details=details
+            or {"file_type": file_type, "supported_formats": supported_formats},
+            status_code=415,  # Unsupported Media Type
         )
 
 
 class FileTooLargeError(DCEBaseException):
     """Raised when a file exceeds the maximum allowed size."""
+
     def __init__(self, file_size: int, max_size: int, details: Optional[Dict] = None):
         message = f"File size ({file_size} bytes) exceeds maximum allowed size ({max_size} bytes)"
         super().__init__(
             message=message,
-            details=details or {
+            details=details
+            or {
                 "file_size": file_size,
                 "max_size": max_size,
-                "max_size_mb": max_size / (1024 * 1024)
+                "max_size_mb": max_size / (1024 * 1024),
             },
-            status_code=413  # Payload Too Large
+            status_code=413,  # Payload Too Large
         )
 
 
 class BatchJobError(DCEBaseException):
     """Raised when a batch job encounters an error."""
-    def __init__(self, batch_id: str, stage: str, error_message: str, details: Optional[Dict] = None):
+
+    def __init__(
+        self,
+        batch_id: str,
+        stage: str,
+        error_message: str,
+        details: Optional[Dict] = None,
+    ):
         message = f"Batch job '{batch_id}' failed at stage '{stage}': {error_message}"
         super().__init__(
             message=message,
-            details=details or {
-                "batch_id": batch_id,
-                "stage": stage,
-                "error": error_message
-            },
-            status_code=500
+            details=details
+            or {"batch_id": batch_id, "stage": stage, "error": error_message},
+            status_code=500,
         )
 
 
 class MetricsError(DCEBaseException):
     """Raised when metrics calculation or retrieval fails."""
-    def __init__(self, operation: str, error_message: str, details: Optional[Dict] = None):
+
+    def __init__(
+        self, operation: str, error_message: str, details: Optional[Dict] = None
+    ):
         message = f"Metrics {operation} failed: {error_message}"
         super().__init__(
             message=message,
-            details=details or {
-                "operation": operation,
-                "error": error_message
-            },
-            status_code=500
+            details=details or {"operation": operation, "error": error_message},
+            status_code=500,
         )
 
 
 class SchedulerError(DCEBaseException):
     """Raised when scheduler operations fail."""
-    def __init__(self, operation: str, error_message: str, details: Optional[Dict] = None):
+
+    def __init__(
+        self, operation: str, error_message: str, details: Optional[Dict] = None
+    ):
         message = f"Scheduler {operation} failed: {error_message}"
         super().__init__(
             message=message,
-            details=details or {
-                "operation": operation,
-                "error": error_message
-            },
-            status_code=500
+            details=details or {"operation": operation, "error": error_message},
+            status_code=500,
         )
 
 
@@ -301,7 +298,9 @@ def get_http_status_code(exception: Exception) -> int:
     return 500
 
 
-def format_error_response(exception: Exception, path: Optional[str] = None) -> Dict[str, Any]:
+def format_error_response(
+    exception: Exception, path: Optional[str] = None
+) -> Dict[str, Any]:
     """Format an exception into a standard error response."""
     if isinstance(exception, DCEBaseException):
         response = exception.to_dict()
@@ -309,12 +308,12 @@ def format_error_response(exception: Exception, path: Optional[str] = None) -> D
         response = {
             "error": exception.__class__.__name__,
             "message": str(exception),
-            "details": {}
+            "details": {},
         }
-    
+
     response["timestamp"] = datetime.utcnow().isoformat()
-    
+
     if path:
         response["path"] = path
-    
+
     return response

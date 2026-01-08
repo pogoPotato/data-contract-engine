@@ -15,33 +15,35 @@ from app.api import contracts, templates, validation
 setup_logging()
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Data Contract Engine...")
-    
+
     try:
         test_connection()
         logger.info("Database connection successful")
-        
+
         init_db()
         logger.info("Database initialized")
-        
+
         setup_scheduler()
         logger.info("Scheduler setup complete")
-        
+
     except Exception as e:
         logger.error(f"Startup failed: {e}")
         raise
-    
+
     yield
-    
+
     logger.info("Shutting down Data Contract Engine...")
-    
+
     try:
         close_db()
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -62,12 +64,14 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+
 @app.exception_handler(DCEBaseException)
 async def dce_exception_handler(request: Request, exc: DCEBaseException):
     return JSONResponse(
         status_code=exc.status_code,
-        content=format_error_response(exc, path=str(request.url))
+        content=format_error_response(exc, path=str(request.url)),
     )
+
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
@@ -78,15 +82,17 @@ async def generic_exception_handler(request: Request, exc: Exception):
             "error": "InternalServerError",
             "message": "An unexpected error occurred",
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "path": str(request.url)
-        }
+            "path": str(request.url),
+        },
     )
+
 
 app.include_router(contracts.router, prefix=settings.API_V1_PREFIX)
 app.include_router(templates.router, prefix=settings.API_V1_PREFIX)
 app.include_router(validation.router, prefix=settings.API_V1_PREFIX)
 app.include_router(versions.router, prefix=settings.API_V1_PREFIX)
 app.include_router(metrics.router, prefix=settings.API_V1_PREFIX)
+
 
 @app.get("/health")
 async def health_check():
@@ -96,16 +102,17 @@ async def health_check():
     except Exception as e:
         logger.error(f"Health check database error: {e}")
         db_status = "disconnected"
-    
+
     overall_status = "healthy" if db_status == "connected" else "unhealthy"
-    
+
     return {
         "status": overall_status,
         "database": db_status,
         "timestamp": datetime.now(timezone.utc),
         "version": settings.VERSION,
-        "service": settings.PROJECT_NAME
+        "service": settings.PROJECT_NAME,
     }
+
 
 @app.get("/")
 async def root():
@@ -116,8 +123,9 @@ async def root():
         "docs": "/docs",
         "health": "/health",
         "api_version": "v1",
-        "api_prefix": settings.API_V1_PREFIX
+        "api_prefix": settings.API_V1_PREFIX,
     }
+
 
 @app.get(f"{settings.API_V1_PREFIX}/")
 async def api_root():
@@ -132,14 +140,20 @@ async def api_root():
             "metrics": f"{settings.API_V1_PREFIX}/metrics",
             "health": "/health",
             "docs": "/docs",
-            "openapi": "/openapi.json"
-        }
+            "openapi": "/openapi.json",
+        },
     }
+
 
 @app.on_event("startup")
 async def startup_event():
-    logger.warning("Using deprecated @app.on_event('startup') - use lifespan context manager instead")
+    logger.warning(
+        "Using deprecated @app.on_event('startup') - use lifespan context manager instead"
+    )
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.warning("Using deprecated @app.on_event('shutdown') - use lifespan context manager instead")
+    logger.warning(
+        "Using deprecated @app.on_event('shutdown') - use lifespan context manager instead"
+    )

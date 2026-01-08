@@ -1,7 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    UploadFile,
+    File,
+    Form,
+    BackgroundTasks,
+)
 from sqlalchemy.orm import Session
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime
 from uuid import UUID
 import uuid
 import tempfile
@@ -13,17 +22,16 @@ from app.models.schemas import (
     ValidationRequest,
     ValidationResult,
     BatchValidationResult,
-    ValidationHistoryResponse
+    ValidationHistoryResponse,
 )
 from app.models.database import ValidationResult as DBValidationResult, BatchSummary
 
 router = APIRouter(prefix="/validate", tags=["validation"])
 
+
 @router.post("/{contract_id}", response_model=ValidationResult)
 async def validate_record(
-    contract_id: UUID,
-    request: ValidationRequest,
-    db: Session = Depends(get_db)
+    contract_id: UUID, request: ValidationRequest, db: Session = Depends(get_db)
 ):
     try:
         engine = ValidationEngine(db)
@@ -34,21 +42,24 @@ async def validate_record(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
+
 @router.post("/{contract_id}/batch", response_model=BatchValidationResult)
 async def validate_batch(
-    contract_id: UUID,
-    request: dict,
-    db: Session = Depends(get_db)
+    contract_id: UUID, request: dict, db: Session = Depends(get_db)
 ):
     try:
-        if 'data' not in request or not isinstance(request['data'], list):
-            raise HTTPException(status_code=422, detail="Request must contain 'data' as a list")
-        
-        data = request['data']
-        
+        if "data" not in request or not isinstance(request["data"], list):
+            raise HTTPException(
+                status_code=422, detail="Request must contain 'data' as a list"
+            )
+
+        data = request["data"]
+
         if len(data) > 10000:
-            raise HTTPException(status_code=413, detail="Batch size exceeds maximum of 10,000 records")
-        
+            raise HTTPException(
+                status_code=413, detail="Batch size exceeds maximum of 10,000 records"
+            )
+
         engine = ValidationEngine(db)
         result = await engine.validate_batch(contract_id, data)
         return result
@@ -59,6 +70,7 @@ async def validate_batch(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch validation error: {str(e)}")
 
+
 @router.get("/{contract_id}/results", response_model=ValidationHistoryResponse)
 def get_validation_history(
     contract_id: UUID,
@@ -67,96 +79,103 @@ def get_validation_history(
     end_date: Optional[datetime] = None,
     limit: int = Query(100, le=1000),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     try:
         query = db.query(DBValidationResult).filter(
             DBValidationResult.contract_id == str(contract_id)
         )
-        
+
         if status:
             query = query.filter(DBValidationResult.status == status)
-        
+
         if start_date:
             query = query.filter(DBValidationResult.validated_at >= start_date)
-        
+
         if end_date:
             query = query.filter(DBValidationResult.validated_at <= end_date)
-        
+
         total = query.count()
-        
-        results = query.order_by(
-            DBValidationResult.validated_at.desc()
-        ).offset(offset).limit(limit).all()
-        
+
+        results = (
+            query.order_by(DBValidationResult.validated_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
         return ValidationHistoryResponse(
             results=[r.to_dict() for r in results],
             total=total,
             filters_applied={
                 "status": status,
                 "start_date": start_date.isoformat() if start_date else None,
-                "end_date": end_date.isoformat() if end_date else None
-            }
+                "end_date": end_date.isoformat() if end_date else None,
+            },
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query error: {str(e)}")
 
+
 @router.get("/results/{result_id}")
-def get_validation_by_id(
-    result_id: UUID,
-    db: Session = Depends(get_db)
-):
+def get_validation_by_id(result_id: UUID, db: Session = Depends(get_db)):
     try:
-        result = db.query(DBValidationResult).filter(
-            DBValidationResult.id == str(result_id)
-        ).first()
-        
+        result = (
+            db.query(DBValidationResult)
+            .filter(DBValidationResult.id == str(result_id))
+            .first()
+        )
+
         if not result:
             raise HTTPException(status_code=404, detail="Validation result not found")
-        
+
         return result.to_dict()
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query error: {str(e)}")
 
+
 @router.get("/{contract_id}/errors/summary")
 def get_error_summary(
-    contract_id: UUID,
-    days: int = Query(7, ge=1, le=90),
-    db: Session = Depends(get_db)
+    contract_id: UUID, days: int = Query(7, ge=1, le=90), db: Session = Depends(get_db)
 ):
     try:
         from datetime import timedelta
         from collections import Counter
-        
+
         start_date = datetime.utcnow() - timedelta(days=days)
-        
-        results = db.query(DBValidationResult).filter(
-            DBValidationResult.contract_id == str(contract_id),
-            DBValidationResult.validated_at >= start_date,
-            DBValidationResult.status == "FAIL"
-        ).all()
-        
+
+        results = (
+            db.query(DBValidationResult)
+            .filter(
+                DBValidationResult.contract_id == str(contract_id),
+                DBValidationResult.validated_at >= start_date,
+                DBValidationResult.status == "FAIL",
+            )
+            .all()
+        )
+
         all_errors = []
         for result in results:
             if result.errors:
-                all_errors.extend([e.get('error_type') for e in result.errors])
-        
+                all_errors.extend([e.get("error_type") for e in result.errors])
+
         error_counts = Counter(all_errors)
         top_errors = [
             {"error_type": err_type, "count": count}
             for err_type, count in error_counts.most_common(10)
         ]
-        
+
         return {
             "error_counts": dict(error_counts),
             "top_errors": top_errors,
             "total_errors": len(all_errors),
-            "period": f"{days} days"
+            "period": f"{days} days",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Summary error: {str(e)}")
+
 
 @router.post("/{contract_id}/upload")
 async def upload_file_for_validation(
@@ -164,60 +183,58 @@ async def upload_file_for_validation(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     file_type: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     if file.size > 100 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large (max 100MB)")
-    
-    if file_type not in ['csv', 'json', 'parquet']:
+
+    if file_type not in ["csv", "json", "parquet"]:
         raise HTTPException(
-            status_code=422, 
-            detail="Unsupported file type. Must be csv, json, or parquet"
+            status_code=422,
+            detail="Unsupported file type. Must be csv, json, or parquet",
         )
-    
+
     batch_id = uuid.uuid4()
-    
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_type}") as tmp_file:
         content = await file.read()
         tmp_file.write(content)
         tmp_path = tmp_file.name
-    
+
     background_tasks.add_task(
-        process_file_background,
-        contract_id,
-        tmp_path,
-        file_type,
-        batch_id
+        process_file_background, contract_id, tmp_path, file_type, batch_id
     )
-    
+
     return {
         "batch_id": str(batch_id),
         "message": "File processing started",
         "status_url": f"/api/v1/validate/batch/{batch_id}/status",
         "contract_id": str(contract_id),
         "file_name": file.filename,
-        "file_size": file.size
+        "file_size": file.size,
     }
 
+
 @router.get("/batch/{batch_id}/status")
-async def get_batch_status(
-    batch_id: UUID, 
-    db: Session = Depends(get_db)
-):
-    batch = db.query(BatchSummary).filter(BatchSummary.batch_id == str(batch_id)).first()
-    
+async def get_batch_status(batch_id: UUID, db: Session = Depends(get_db)):
+    batch = (
+        db.query(BatchSummary).filter(BatchSummary.batch_id == str(batch_id)).first()
+    )
+
     if not batch:
-        validation_results = db.query(DBValidationResult).filter(
-            DBValidationResult.batch_id == str(batch_id)
-        ).count()
-        
+        validation_results = (
+            db.query(DBValidationResult)
+            .filter(DBValidationResult.batch_id == str(batch_id))
+            .count()
+        )
+
         if validation_results > 0:
             return {
                 "batch_id": str(batch_id),
                 "status": "PROCESSING",
                 "progress": 50.0,
                 "total_records": validation_results * 2,
-                "processed_records": validation_results
+                "processed_records": validation_results,
             }
         else:
             return {
@@ -225,9 +242,9 @@ async def get_batch_status(
                 "status": "PROCESSING",
                 "progress": 0.0,
                 "total_records": 0,
-                "processed_records": 0
+                "processed_records": 0,
             }
-    
+
     return {
         "batch_id": str(batch_id),
         "status": "COMPLETED",
@@ -241,62 +258,67 @@ async def get_batch_status(
             "pass_rate": batch.pass_rate,
             "execution_time_ms": batch.execution_time_ms,
             "errors_summary": batch.errors_summary,
-            "processed_at": batch.processed_at.isoformat() if batch.processed_at else None
-        }
+            "processed_at": (
+                batch.processed_at.isoformat() if batch.processed_at else None
+            ),
+        },
     }
 
+
 async def process_file_background(
-    contract_id: UUID,
-    file_path: str,
-    file_type: str,
-    batch_id: UUID
+    contract_id: UUID, file_path: str, file_type: str, batch_id: UUID
 ):
     from app.core.batch_processor import BatchProcessor
     from app.database import get_db_session
     from app.models.database import BatchSummary
     import logging
     import traceback
-    import os
     from datetime import datetime
-    
+
     logger = logging.getLogger(__name__)
     db = get_db_session()
-    
+
     try:
         logger.info(f"[BATCH {batch_id}] Starting background processing")
-        logger.info(f"[BATCH {batch_id}] Contract: {contract_id}, File: {file_path}, Type: {file_type}")
-        
+        logger.info(
+            f"[BATCH {batch_id}] Contract: {contract_id}, File: {file_path}, Type: {file_type}"
+        )
+
         if not os.path.exists(file_path):
             logger.error(f"[BATCH {batch_id}] File not found: {file_path}")
             raise FileNotFoundError(f"File not found: {file_path}")
-        
+
         processor = BatchProcessor(db)
-        
+
         logger.info(f"[BATCH {batch_id}] Calling processor.process_file()")
         result = await processor.process_file(
             contract_id=contract_id,
             file_path=file_path,
             file_type=file_type,
-            batch_id=batch_id
+            batch_id=batch_id,
         )
-        
+
         logger.info(f"[BATCH {batch_id}] Processing completed")
-        logger.info(f"[BATCH {batch_id}] Result: {result.passed}/{result.total_records} passed")
-        
-        summary = db.query(BatchSummary).filter(
-            BatchSummary.batch_id == str(batch_id)
-        ).first()
-        
+        logger.info(
+            f"[BATCH {batch_id}] Result: {result.passed}/{result.total_records} passed"
+        )
+
+        summary = (
+            db.query(BatchSummary)
+            .filter(BatchSummary.batch_id == str(batch_id))
+            .first()
+        )
+
         if summary:
             logger.info(f"[BATCH {batch_id}] BatchSummary verified in database")
         else:
             logger.error(f"[BATCH {batch_id}] BatchSummary NOT found in database!")
-        
+
     except Exception as e:
         logger.error(f"[BATCH {batch_id}] ERROR: {str(e)}")
         logger.error(f"[BATCH {batch_id}] Full traceback:")
         logger.error(traceback.format_exc())
-        
+
         try:
             error_summary = BatchSummary(
                 batch_id=str(batch_id),
@@ -307,14 +329,16 @@ async def process_file_background(
                 pass_rate=0.0,
                 execution_time_ms=0.0,
                 errors_summary={"error": str(e), "traceback": traceback.format_exc()},
-                processed_at=datetime.utcnow()
+                processed_at=datetime.utcnow(),
             )
             db.add(error_summary)
             db.commit()
             logger.info(f"[BATCH {batch_id}] Error summary stored")
         except Exception as db_err:
-            logger.error(f"[BATCH {batch_id}] Failed to store error summary: {str(db_err)}")
-        
+            logger.error(
+                f"[BATCH {batch_id}] Failed to store error summary: {str(db_err)}"
+            )
+
         db.rollback()
     finally:
         if os.path.exists(file_path):
@@ -323,6 +347,6 @@ async def process_file_background(
                 logger.info(f"[BATCH {batch_id}] Removed temporary file: {file_path}")
             except Exception as e:
                 logger.error(f"[BATCH {batch_id}] Error removing file: {str(e)}")
-        
+
         db.close()
         logger.info(f"[BATCH {batch_id}] Background task completed")
