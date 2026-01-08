@@ -125,10 +125,12 @@ with tab3:
         else:
             df_data = []
             for r in results:
+                errors = r.get("errors", []) if r.get("errors") is not None else []
+
                 df_data.append({
                     "Timestamp": r["validated_at"][:19],
                     "Status": r["status"],
-                    "Errors": len(r.get("errors", [])),
+                    "Errors": len(errors),
                     "Execution (ms)": f"{r['execution_time_ms']:.2f}"
                 })
             
