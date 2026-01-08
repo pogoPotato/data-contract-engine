@@ -60,6 +60,8 @@ alembic/versions/*.pyc
 
 PROGRESS.md
 BUGS_AND_IMPROVEMENTS.md
+CODEBASE_SUMMARY.md
+project_code_dump.md
 
 test_batch.py
 test_data.json
@@ -73,3 +75,5 @@ setup_phase5.sh
 test_wrapped.json
 terminal_output.txt
 error.txt
+batch_100.json
+test_users.json
