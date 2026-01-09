@@ -15,7 +15,7 @@ from app.utils.exceptions import ContractNotFoundError
 
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/contracts", tags=["versions"])
+router = APIRouter(prefix="/contract-versions", tags=["versions"])
 
 
 @router.get("/{contract_id}/versions", response_model=VersionHistoryResponse)

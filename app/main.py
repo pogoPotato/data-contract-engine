@@ -136,7 +136,7 @@ async def api_root():
             "contracts": f"{settings.API_V1_PREFIX}/contracts",
             "templates": f"{settings.API_V1_PREFIX}/contracts/templates",
             "validation": f"{settings.API_V1_PREFIX}/validate",
-            "versions": f"{settings.API_V1_PREFIX}/contracts/{{id}}/versions",
+            "versions": f"{settings.API_V1_PREFIX}/contract-versions/{{id}}/versions",
             "metrics": f"{settings.API_V1_PREFIX}/metrics",
             "health": "/health",
             "docs": "/docs",
