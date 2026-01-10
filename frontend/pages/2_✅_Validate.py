@@ -106,8 +106,8 @@ with tab2:
                     st.markdown("### Sample Errors")
                     for error in result["sample_errors"][:5]:
                         with st.expander(f"Record {error['record_number']} - {error['field']}"):
-                            st.markdown(f"**Error:** {error['error']}")
-                            st.markdown(f"**Value:** `{error['value']}`")
+                            st.markdown(f"**Error:** {error.get('error_type', 'Unknown')}")
+                            st.markdown(f"**Value:** `{error.get('value', 'N/A')}`")
             
             except Exception as e:
                 st.error(f"Batch validation failed: {e}")

@@ -36,7 +36,7 @@ try:
     metrics_data = []
     for metric in metrics:
         row = {
-            'date': metric.get('date'),
+            'date': metric.get('metric_date'),
             'total_validations': metric.get('total_validations', 0),
             'passed': metric.get('passed', 0),
             'failed': metric.get('failed', 0),

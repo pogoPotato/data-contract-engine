@@ -88,16 +88,16 @@ class APIClient:
         return []
     
     def get_contract_versions(self, contract_id: str) -> List[Dict]:
-        result = self._request("GET", f"contracts/{contract_id}/versions")
-        
+        result = self._request("GET", f"contract-versions/{contract_id}/versions")
+
         if isinstance(result, list):
             return result
         elif isinstance(result, dict) and "versions" in result:
             return result["versions"]
         return []
-    
+
     def compare_versions(self, contract_id: str, v1: str, v2: str) -> Dict:
-        return self._request("GET", f"contracts/{contract_id}/diff/{v1}/{v2}")
+        return self._request("GET", f"contract-versions/{contract_id}/diff/{v1}/{v2}")
     
     def get_daily_metrics(self, contract_id: str, days: int = 30) -> List[Dict]:
         params = {"days": days}
