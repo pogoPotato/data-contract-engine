@@ -214,6 +214,46 @@ async def get_quality_score(
         "last_updated": latest.created_at,
     }
 
+@router.get("/{contract_id}/dashboard")
+async def get_dashboard(
+    contract_id: UUID,
+    days: int = Query(7, ge=1, le=365),
+    db: Session = Depends(get_db),
+):
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+    
+    metrics = (
+        db.query(QualityMetric)
+        .filter(
+            QualityMetric.contract_id == str(contract_id),
+            QualityMetric.metric_date >= start_date,
+        )
+        .order_by(QualityMetric.metric_date.desc())
+        .all()
+    )
+    
+    aggregator = MetricsAggregator(db)
+    
+    daily_metrics_data = [
+        DailyMetrics.from_orm(m) for m in metrics[:30]
+    ]
+    
+    trend_data = aggregator.get_trend_data(str(contract_id), days)
+    
+    top_errors_data = await get_top_errors(contract_id, days, 10, db)
+    
+    quality_score_data = await get_quality_score(contract_id, days, db)
+    
+    return {
+        "period": {"start_date": str(start_date), "end_date": str(end_date), "days": days},
+        "daily_metrics": daily_metrics_data,
+        "trend": trend_data,
+        "top_errors": top_errors_data.get("errors", []),
+        "quality_score": quality_score_data,
+    }
+
+
 @router.post("/aggregate")
 async def trigger_aggregation(db: Session = Depends(get_db)):
     from datetime import date
