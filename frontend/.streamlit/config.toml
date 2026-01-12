@@ -13,3 +13,24 @@ enableXsrfProtection = true
 
 [browser]
 gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[client]
+showErrorDetails = true
+maxUploadSize = 200
+toolbarMode = "viewer"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200
+
+[runner]
+magicEnabled = true
+fastReruns = true
+
+[logger]
+level = "info"
